@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Coleccionables</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎯 Sistema de Gestión de Coleccionables</h1>
+            <p>Administra tu inventario de productos coleccionables</p>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="crear">➕ Crear Producto</button>
+            <button class="nav-btn" data-tab="listar">📋 Listar Productos</button>
+            <button class="nav-btn" data-tab="buscar">🔍 Buscar por Atributo</button>
+        </nav>
+
+        <!-- Tabs Content -->
+        <div class="tabs-container">
+            <!-- Tab 1: Crear Producto -->
+            <div id="crear" class="tab-content active">
+                <h2>Crear Nuevo Producto</h2>
+                <form id="crearForm" class="form" onsubmit="return false">
+                    <div class="form-group">
+                        <label for="sku">SKU *</label>
+                        <input type="text" id="sku" name="sku" required placeholder="ej: PKM-001">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre">Nombre *</label>
+                        <input type="text" id="nombre" name="nombre" required placeholder="ej: Charizard Holográfico">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="categoria">Categoría *</label>
+                        <input type="text" id="categoria" name="categoria" required placeholder="ej: Pokémon">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="precio">Precio (CLP) *</label>
+                            <input type="number" id="precio" name="precio" required min="0" placeholder="50000">
+                        </div>
+                        <div class="form-group">
+                            <label for="stock">Stock *</label>
+                            <input type="number" id="stock" name="stock" required min="0" placeholder="5">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Atributos Específicos</label>
+                        <div id="atributosContainer">
+                            <div class="atributo-item">
+                                <input type="text" placeholder="Clave (ej: rareza)" class="atributo-key">
+                                <input type="text" placeholder="Valor (ej: Holográfico)" class="atributo-value">
+                                <button type="button" class="btn-eliminar-atributo">✕</button>
+                            </div>
+                        </div>
+                        <button type="button" id="agregarAtributo" class="btn-secondary">+ Agregar Atributo</button>
+                    </div>
+
+                    <button type="submit" class="btn-primary">Crear Producto</button>
+                </form>
+                <div id="crearMensaje" class="mensaje"></div>
+            </div>
+
+            <!-- Tab 2: Listar Productos -->
+            <div id="listar" class="tab-content">
+                <h2>Productos Registrados</h2>
+                <button id="recargarProductos" class="btn-secondary">🔄 Recargar</button>
+                <div id="productosLista" class="productos-grid"></div>
+                <div id="listarMensaje" class="mensaje"></div>
+            </div>
+
+            <!-- Tab 3: Buscar por Atributo -->
+            <div id="buscar" class="tab-content">
+                <h2>Buscar por Atributo</h2>
+                <div class="form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buscarClave">Clave</label>
+                            <input type="text" id="buscarClave" placeholder="ej: rareza">
+                        </div>
+                        <div class="form-group">
+                            <label for="buscarValor">Valor</label>
+                            <input type="text" id="buscarValor" placeholder="ej: Holográfico">
+                        </div>
+                    </div>
+                    <button id="buscarBtn" class="btn-primary">🔍 Buscar</button>
+                </div>
+                <div id="resultadosBusqueda" class="productos-grid"></div>
+                <div id="buscarMensaje" class="mensaje"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar/eliminar -->
+    <div id="modalProducto" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitulo">Detalles del Producto</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
