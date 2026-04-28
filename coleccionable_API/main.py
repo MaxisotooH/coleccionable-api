@@ -26,11 +26,16 @@ app.add_middleware(
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
 # Configuración de MongoDB desde variables de entorno
-MONGO_URL = os.getenv(
-    "MONGODB_URI",
-    "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-)
+MONGO_URL = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_DB_NAME", "tienda_coleccionables")
+
+# Validar que MONGODB_URI esté configurado
+if not MONGO_URL:
+    # En desarrollo, usar valor por defecto
+    if os.getenv("ENV") != "production":
+        MONGO_URL = "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    else:
+        raise ValueError("MONGODB_URI environment variable is not set")
 client: Optional[AsyncIOMotorClient] = None
 db: Optional[AsyncIOMotorDatabase] = None
 
