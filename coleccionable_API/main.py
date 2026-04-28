@@ -41,29 +41,43 @@ print(f"📍 DB_NAME: {DB_NAME}")
 
 @app.on_event("startup")
 async def startup_db_client():
-    """Conectar a MongoDB al iniciar con reintentos"""
+    """Conectar a MongoDB al iniciar con reintentos y mejor configuración"""
     global client, db
-    max_retries = 3
+    max_retries = 5
     retry_count = 0
+    
+    # Configuración mejorada para MongoDB Atlas con SSL/TLS
+    mongo_options = {
+        'serverSelectionTimeoutMS': 30000,  # 30 segundos para seleccionar servidor
+        'socketTimeoutMS': 30000,  # 30 segundos para socket operations
+        'connectTimeoutMS': 30000,  # 30 segundos para conectar
+        'retryWrites': True,
+        'w': 'majority',
+        'maxPoolSize': 10,
+        'minPoolSize': 2,
+    }
     
     while retry_count < max_retries:
         try:
             print(f"🔄 Intento de conexión a MongoDB... ({retry_count + 1}/{max_retries})")
-            client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=10000)
-            # Verificar conexión
-            await client.admin.command('ismaster')
+            client = AsyncIOMotorClient(MONGO_URL, **mongo_options)
+            # Verificar conexión con timeout extendido
+            await client.admin.command('ismaster', timeoutMS=30000)
             db = client[DB_NAME]
             print("✅ Conectado a MongoDB Atlas exitosamente")
             return
         except Exception as e:
             retry_count += 1
-            print(f"⚠️ Intento {retry_count} falló: {e}")
+            error_msg = str(e)
+            print(f"⚠️ Intento {retry_count} falló: {error_msg[:100]}...")
             if retry_count < max_retries:
                 import asyncio
-                await asyncio.sleep(2)
+                wait_time = 3 + retry_count  # Backoff exponencial: 4, 5, 6, 7, 8 segundos
+                print(f"   Esperando {wait_time}s antes de reintentar...")
+                await asyncio.sleep(wait_time)
             else:
-                print(f"❌ No se pudo conectar a MongoDB después de {max_retries} intentos")
-                print("⚠️ La aplicación se iniciará sin base de datos.")
+                print(f"❌ No se pudo conectar después de {max_retries} intentos")
+                print("⚠️ App iniciada sin base de datos. Los endpoints retornarán errores.")
                 return
 
 @app.on_event("shutdown")
@@ -86,6 +100,32 @@ class Producto(BaseModel):
     precio_clp: int
     stock_actual: int
     atributos_especificos: List[AtributoEspecifico]
+
+# ==================== HELPER FUNCTIONS ====================
+
+async def verificar_db_conectada():
+    """Verifica que MongoDB esté conectada, intenta reconectar si no"""
+    global db, client
+    
+    if db is None:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible. Intente más tarde.")
+    
+    try:
+        # Verificar conexión actual
+        await db.admin.command('ismaster', timeoutMS=5000)
+        return True
+    except Exception as e:
+        print(f"⚠️ Conexión a MongoDB perdida: {e}")
+        # Intentar reconectar
+        try:
+            print("🔄 Intentando reconectar...")
+            await startup_db_client()
+            if db is not None:
+                print("✅ Reconexión exitosa")
+                return True
+        except:
+            pass
+        raise HTTPException(status_code=503, detail="Problema de conexión con la base de datos.")
 
 # ==================== ENDPOINTS ====================
 
@@ -163,25 +203,39 @@ async def listar_productos(limit: int = 100):
 @app.post("/productos", status_code=201)
 async def crear_producto(producto: Producto):
     """Crea un nuevo producto"""
-    try:
-        if db is None:
-            raise HTTPException(status_code=500, detail="Base de datos no disponible")
+    max_reintentos = 2
+    intento = 0
+    
+    while intento < max_reintentos:
+        try:
+            # Verificar conexión
+            await verificar_db_conectada()
+            
+            # Verificar si el SKU ya existe
+            existe = await db.productos.find_one({"sku": producto.sku}, timeoutMS=10000)
+            if existe:
+                raise HTTPException(status_code=409, detail="El SKU ya existe")
+            
+            nuevo_prod = producto.dict()
+            nuevo_prod["fecha_creacion"] = datetime.utcnow().isoformat()
+            
+            result = await db.productos.insert_one(nuevo_prod)
+            return {"mensaje": "Producto creado exitosamente", "id": str(result.inserted_id)}
         
-        # Verificar si el SKU ya existe
-        existe = await db.productos.find_one({"sku": producto.sku})
-        if existe:
-            raise HTTPException(status_code=409, detail="El SKU ya existe")
-        
-        nuevo_prod = producto.dict()
-        nuevo_prod["fecha_creacion"] = datetime.utcnow().isoformat()
-        
-        result = await db.productos.insert_one(nuevo_prod)
-        return {"mensaje": "Producto creado exitosamente", "id": str(result.inserted_id)}
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Error en crear_producto: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception as e:
+            intento += 1
+            error_msg = str(e)[:100]
+            print(f"Error en crear_producto (intento {intento}/{max_reintentos}): {error_msg}")
+            
+            if intento < max_reintentos:
+                import asyncio
+                print("🔄 Reintentando...")
+                await asyncio.sleep(2)
+            else:
+                print(f"❌ Falló después de {max_reintentos} intentos")
+                raise HTTPException(status_code=500, detail=f"Error al crear producto: {error_msg}")
 
 # BUSCAR por atributo
 @app.get("/productos/buscar/atributo", tags=["Consultas"])
