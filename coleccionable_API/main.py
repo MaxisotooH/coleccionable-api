@@ -7,6 +7,9 @@ from typing import List, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Sistema de Gestión de Inventario - Coleccionables")
 
@@ -22,8 +25,12 @@ app.add_middleware(
 # Ruta de archivos estáticos
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
-# Configuración de MongoDB
-MONGO_URL = "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# Configuración de MongoDB desde variables de entorno
+MONGO_URL = os.getenv(
+    "MONGODB_URI",
+    "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+)
+DB_NAME = os.getenv("MONGODB_DB_NAME", "tienda_coleccionables")
 client: Optional[AsyncIOMotorClient] = None
 db: Optional[AsyncIOMotorDatabase] = None
 
@@ -35,7 +42,7 @@ async def startup_db_client():
         client = AsyncIOMotorClient(MONGO_URL)
         # Verificar conexión
         await client.admin.command('ismaster')
-        db = client.tienda_coleccionables
+        db = client[DB_NAME]
         print("✅ Conectado a MongoDB Atlas exitosamente")
     except Exception as e:
         print(f"❌ Error conectando a MongoDB: {e}")
