@@ -1,9 +1,11 @@
 // Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado, inicializando aplicación...');
+    console.log('===== INICIANDO APLICACIÓN =====');
+    console.log('DOM cargado completamente');
     
     // Configuración
     const API_BASE_URL = window.location.origin;
+    console.log('API_BASE_URL:', API_BASE_URL);
 
     // Elementos del DOM
     const navBtns = document.querySelectorAll('.nav-btn');
@@ -16,12 +18,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('modalProducto');
     const closeModal = document.querySelector('.close');
 
-    // Validación
-    if (!crearForm) {
-        console.error('❌ No se encontró el elemento crearForm');
+    console.log('Elementos encontrados:');
+    console.log('✅ crearForm:', !!crearForm);
+    console.log('✅ agregarAtributoBtn:', !!agregarAtributoBtn);
+    console.log('✅ recargarProductosBtn:', !!recargarProductosBtn);
+    console.log('✅ buscarBtn:', !!buscarBtn);
+    console.log('✅ modal:', !!modal);
+
+    // Agregar listener al form
+    if (crearForm) {
+        console.log('✅ Agregando listener SUBMIT al form...');
+        crearForm.addEventListener('submit', function(e) {
+            console.log('⚠️  FORM SUBMIT TRIGGERED!');
+            e.preventDefault();
+            crearProducto(e);
+        });
     } else {
-        console.log('✅ crearForm encontrado, agregando listener...');
-        crearForm.addEventListener('submit', crearProducto);
+        console.error('❌ ERROR: No se encontró #crearForm');
     }
 
     // Event Listeners - Navegación
@@ -85,6 +98,7 @@ const API_BASE_URL = window.location.origin;
 
 // 1. CREAR PRODUCTO
 async function crearProducto(e) {
+    console.log('===== CREAR PRODUCTO INICIADO =====');
     e.preventDefault();
     
     const sku = document.getElementById('sku').value;
@@ -92,6 +106,13 @@ async function crearProducto(e) {
     const categoria = document.getElementById('categoria').value;
     const precio_clp = parseInt(document.getElementById('precio').value);
     const stock_actual = parseInt(document.getElementById('stock').value);
+
+    console.log('Datos del formulario:');
+    console.log('SKU:', sku);
+    console.log('Nombre:', nombre);
+    console.log('Categoría:', categoria);
+    console.log('Precio:', precio_clp);
+    console.log('Stock:', stock_actual);
 
     // Obtener atributos
     const atributosInputs = document.querySelectorAll('.atributo-item');
@@ -105,6 +126,8 @@ async function crearProducto(e) {
         }
     });
 
+    console.log('Atributos:', atributos_especificos);
+
     const producto = {
         sku,
         nombre,
@@ -114,8 +137,11 @@ async function crearProducto(e) {
         atributos_especificos
     };
 
+    console.log('Objeto a enviar:', producto);
+    console.log('Haciendo POST a:', `${window.location.origin}/productos`);
+
     try {
-        const response = await fetch(`${API_BASE_URL}/productos`, {
+        const response = await fetch(`${window.location.origin}/productos`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -123,17 +149,23 @@ async function crearProducto(e) {
             body: JSON.stringify(producto)
         });
 
+        console.log('Respuesta status:', response.status);
+        console.log('Response OK:', response.ok);
+
         let data;
         try {
             data = await response.json();
+            console.log('Respuesta JSON:', data);
         } catch (e) {
+            console.error('Error parseando JSON:', e);
             data = { detail: `Error del servidor: ${response.statusText}` };
         }
 
         if (response.ok) {
+            console.log('✅ Producto creado exitosamente');
             mostrarMensaje('crearMensaje', `✅ Producto "${nombre}" creado exitosamente!`, 'success');
-            crearForm.reset();
-            atributosContainer.innerHTML = `
+            document.getElementById('crearForm').reset();
+            document.getElementById('atributosContainer').innerHTML = `
                 <div class="atributo-item">
                     <input type="text" placeholder="Clave (ej: rareza)" class="atributo-key">
                     <input type="text" placeholder="Valor (ej: Holográfico)" class="atributo-value">
@@ -141,23 +173,31 @@ async function crearProducto(e) {
                 </div>
             `;
         } else {
+            console.error('❌ Error creando producto:', data);
             mostrarMensaje('crearMensaje', `❌ Error: ${data.detail || 'Error desconocido'}`, 'error');
         }
     } catch (error) {
+        console.error('❌ Error de conexión:', error);
         mostrarMensaje('crearMensaje', `❌ Error de conexión: ${error.message}`, 'error');
     }
 }
 
 // 2. LISTAR PRODUCTOS
 async function cargarProductos() {
+    console.log('===== CARGAR PRODUCTOS INICIADO =====');
     const productosLista = document.getElementById('productosLista');
     productosLista.innerHTML = '<p style="text-align: center; color: #666;">Cargando...</p>';
 
     try {
+        console.log('Haciendo GET a:', `${window.location.origin}/productos`);
         // Obtener todos los productos
-        const response = await fetch(`${API_BASE_URL}/productos`);
+        const response = await fetch(`${window.location.origin}/productos`);
         
+        console.log('Respuesta status:', response.status);
+        console.log('Response OK:', response.ok);
+
         if (!response.ok) {
+            console.error('❌ Error al cargar productos:', response.status);
             mostrarMensaje('listarMensaje', `❌ Error al cargar productos: ${response.status}`, 'error');
             productosLista.innerHTML = '';
             return;
@@ -166,17 +206,21 @@ async function cargarProductos() {
         let productos;
         try {
             productos = await response.json();
+            console.log('Productos recibidos:', productos);
         } catch (e) {
+            console.error('❌ Error parseando JSON:', e);
             mostrarMensaje('listarMensaje', `❌ Error procesando respuesta del servidor`, 'error');
             productosLista.innerHTML = '';
             return;
         }
         
         if (Array.isArray(productos) && productos.length === 0) {
+            console.log('No hay productos');
             productosLista.innerHTML = '<p style="text-align: center; color: #999;">No hay productos registrados</p>';
             return;
         }
 
+        console.log('Renderizando productos...');
         productosLista.innerHTML = productos.map(p => crearTarjetaProducto(p)).join('');
         
         // Agregar event listeners a los botones
