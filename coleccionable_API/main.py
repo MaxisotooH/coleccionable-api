@@ -36,18 +36,30 @@ db: Optional[AsyncIOMotorDatabase] = None
 
 @app.on_event("startup")
 async def startup_db_client():
-    """Conectar a MongoDB al iniciar"""
+    """Conectar a MongoDB al iniciar con reintentos"""
     global client, db
-    try:
-        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000)
-        # Verificar conexión
-        await client.admin.command('ismaster')
-        db = client[DB_NAME]
-        print("✅ Conectado a MongoDB Atlas exitosamente")
-    except Exception as e:
-        print(f"⚠️ Advertencia: No se pudo conectar a MongoDB: {e}")
-        print("⚠️ La aplicación se iniciará sin base de datos. Los endpoints retornarán errores.")
-        # NO hacer raise - permitir que la app se inicie aunque MongoDB falle
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            print(f"🔄 Intento de conexión a MongoDB... ({retry_count + 1}/{max_retries})")
+            client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=10000)
+            # Verificar conexión
+            await client.admin.command('ismaster')
+            db = client[DB_NAME]
+            print("✅ Conectado a MongoDB Atlas exitosamente")
+            return
+        except Exception as e:
+            retry_count += 1
+            print(f"⚠️ Intento {retry_count} falló: {e}")
+            if retry_count < max_retries:
+                import asyncio
+                await asyncio.sleep(2)
+            else:
+                print(f"❌ No se pudo conectar a MongoDB después de {max_retries} intentos")
+                print("⚠️ La aplicación se iniciará sin base de datos.")
+                return
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
