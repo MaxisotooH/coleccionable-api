@@ -105,25 +105,26 @@ async def diagnostico():
     global db
     try:
         if db is None:
-            return {"status": "❌ DB NO CONECTADA", "db_object": "None"}
+            return {"status": "❌ DB NO CONECTADA", "detail": "db object is None"}
         
-        # Intentar hacer una consulta simple
-        await db.admin.command('ping')
-        
-        # Contar productos en BD
-        count = await db.productos.count_documents({})
-        
-        return {
-            "status": "✅ MongoDB conectada",
-            "database": DB_NAME,
-            "productos_en_bd": count,
-            "connection": "✅ ACTIVA"
-        }
+        # Intentar contar documentos
+        try:
+            count = await db.productos.count_documents({})
+            return {
+                "status": "✅ MongoDB conectada",
+                "database": DB_NAME,
+                "productos_en_bd": count,
+                "connection": "✅ ACTIVA"
+            }
+        except Exception as count_error:
+            return {
+                "status": "⚠️ DB existe pero error al consultar",
+                "error": str(count_error)
+            }
     except Exception as e:
         return {
-            "status": "❌ Error",
-            "error": str(e),
-            "db_object": "Existe pero no disponible" if db else "None"
+            "status": "❌ Error general",
+            "error": str(e)
         }
 
 @app.get("/dashboard", response_class=HTMLResponse)
