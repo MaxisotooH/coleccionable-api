@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from typing import List, Any
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -35,9 +36,7 @@ async def root():
         "version": "1.0.0"
     }
 
-# HTMLResponse para el dashboard
-from fastapi.responses import HTMLResponse
-
+# Endpoint para servir el dashboard HTML
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
     """Sirve el dashboard HTML"""

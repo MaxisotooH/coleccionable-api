@@ -96,7 +96,12 @@ async function crearProducto(e) {
             body: JSON.stringify(producto)
         });
 
-        const data = await response.json();
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { detail: `Error del servidor: ${response.statusText}` };
+        }
 
         if (response.ok) {
             mostrarMensaje('crearMensaje', `✅ Producto "${nombre}" creado exitosamente!`, 'success');
@@ -109,7 +114,7 @@ async function crearProducto(e) {
                 </div>
             `;
         } else {
-            mostrarMensaje('crearMensaje', `❌ Error: ${data.detail}`, 'error');
+            mostrarMensaje('crearMensaje', `❌ Error: ${data.detail || 'Error desconocido'}`, 'error');
         }
     } catch (error) {
         mostrarMensaje('crearMensaje', `❌ Error de conexión: ${error.message}`, 'error');
@@ -125,14 +130,20 @@ async function cargarProductos() {
         // Obtener todos los productos
         const response = await fetch(`${API_BASE_URL}/productos`);
         
-        if (!response.ok && response.status === 404) {
-            // Si no existe endpoint de listar todos, buscar de otra forma
-            mostrarMensaje('listarMensaje', 'ℹ️ Usa la pestaña "Buscar por Atributo" para encontrar productos', 'info');
+        if (!response.ok) {
+            mostrarMensaje('listarMensaje', `❌ Error al cargar productos: ${response.status}`, 'error');
             productosLista.innerHTML = '';
             return;
         }
 
-        const productos = await response.json();
+        let productos;
+        try {
+            productos = await response.json();
+        } catch (e) {
+            mostrarMensaje('listarMensaje', `❌ Error procesando respuesta del servidor`, 'error');
+            productosLista.innerHTML = '';
+            return;
+        }
         
         if (Array.isArray(productos) && productos.length === 0) {
             productosLista.innerHTML = '<p style="text-align: center; color: #999;">No hay productos registrados</p>';
@@ -172,7 +183,21 @@ async function buscarPorAtributo() {
 
     try {
         const response = await fetch(`${API_BASE_URL}/productos/buscar/atributo?clave=${encodeURIComponent(clave)}&valor=${encodeURIComponent(valor)}`);
-        const productos = await response.json();
+        
+        if (!response.ok) {
+            mostrarMensaje('buscarMensaje', `❌ Error en la búsqueda: ${response.status}`, 'error');
+            resultados.innerHTML = '';
+            return;
+        }
+
+        let productos;
+        try {
+            productos = await response.json();
+        } catch (e) {
+            mostrarMensaje('buscarMensaje', `❌ Error procesando respuesta del servidor`, 'error');
+            resultados.innerHTML = '';
+            return;
+        }
 
         if (Array.isArray(productos) && productos.length > 0) {
             resultados.innerHTML = productos.map(p => crearTarjetaProducto(p)).join('');
@@ -192,7 +217,7 @@ async function buscarPorAtributo() {
         }
     } catch (error) {
         resultados.innerHTML = '';
-        mostrarMensaje('buscarMensaje', `❌ Error: ${error.message}`, 'error');
+        mostrarMensaje('buscarMensaje', `❌ Error de conexión: ${error.message}`, 'error');
     }
 }
 
@@ -200,7 +225,19 @@ async function buscarPorAtributo() {
 async function abrirModalProducto(sku) {
     try {
         const response = await fetch(`${API_BASE_URL}/productos/${sku}`);
-        const producto = await response.json();
+        
+        if (!response.ok) {
+            alert(`❌ Error al cargar producto: ${response.status}`);
+            return;
+        }
+
+        let producto;
+        try {
+            producto = await response.json();
+        } catch (e) {
+            alert(`❌ Error procesando respuesta del servidor`);
+            return;
+        }
 
         const modalBody = document.getElementById('modalBody');
         const modalTitulo = document.getElementById('modalTitulo');
@@ -230,7 +267,7 @@ async function abrirModalProducto(sku) {
 
         modal.classList.add('active');
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        alert(`❌ Error de conexión: ${error.message}`);
     }
 }
 
@@ -255,15 +292,22 @@ async function actualizarProducto(sku, stock_nuevo, precio_nuevo) {
             }
         });
 
+        let data;
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { mensaje: `Error del servidor: ${response.statusText}` };
+        }
+
         if (response.ok) {
-            alert('✅ Producto actualizado exitosamente');
+            alert(`✅ Producto actualizado exitosamente`);
             cerrarModal();
             cargarProductos();
         } else {
-            alert('❌ Error al actualizar');
+            alert(`❌ Error al actualizar: ${data.detail || 'Error desconocido'}`);
         }
     } catch (error) {
-        alert(`Error: ${error.message}`);
+        alert(`❌ Error de conexión: ${error.message}`);
     }
 }
 
@@ -275,15 +319,23 @@ async function confirmarEliminar(sku) {
                 method: 'DELETE'
             });
 
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = { mensaje: `Error del servidor: ${response.statusText}` };
+            }
+
             if (response.ok) {
-                alert('✅ Producto eliminado exitosamente');
+                alert(`✅ Producto eliminado exitosamente`);
                 cerrarModal();
                 cargarProductos();
             } else {
-                alert('❌ Error al eliminar');
+                alert(`❌ Error al eliminar: ${data.detail || 'Error desconocido'}`);
             }
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            alert(`❌ Error de conexión: ${error.message}`);
+        }
         }
     }
 }
