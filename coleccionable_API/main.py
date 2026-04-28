@@ -1,21 +1,48 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Any
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
+import os
 
 app = FastAPI(title="Sistema de Gestión de Inventario - Coleccionables")
 
-# Endpoint raíz (health check)
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Montar archivos estáticos
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# Endpoint raíz (health check y redirect a dashboard)
 @app.get("/")
 async def root():
     """Endpoint raíz para verificar que la API está funcionando"""
     return {
         "status": "online",
         "api": "Sistema de Gestión de Inventario - Coleccionables",
+        "dashboard": "/dashboard",
         "docs": "/docs",
         "version": "1.0.0"
     }
+
+# HTMLResponse para el dashboard
+from fastapi.responses import HTMLResponse
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    """Sirve el dashboard HTML"""
+    with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
+        return f.read()
 
 # Configuración de MongoDB (Usaremos una variable para la URI más adelante)
 MONGO_URL = "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?appName=Cluster0" # Por ahora local, luego será Atlas
@@ -34,6 +61,17 @@ class Producto(BaseModel):
     precio_clp: int
     stock_actual: int
     atributos_especificos: List[AtributoEspecifico]
+
+# Endpoint para LISTAR productos (GET) [cite: 160]
+@app.get("/productos", tags=["Consultas"])
+async def listar_productos(limit: int = 100):
+    """Lista hasta 100 productos recientemente agregados"""
+    cursor = db.productos.find().sort("_id", -1).limit(limit)
+    productos = await cursor.to_list(length=limit)
+    # Remover el _id de MongoDB
+    return [{"sku": p.get("sku"), "nombre": p.get("nombre"), "categoria": p.get("categoria"), 
+             "precio_clp": p.get("precio_clp"), "stock_actual": p.get("stock_actual"),
+             "atributos_especificos": p.get("atributos_especificos", [])} for p in productos]
 
 # Endpoint para CREAR un producto (POST) [cite: 165]
 @app.post("/productos", status_code=201)
