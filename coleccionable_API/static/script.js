@@ -1,58 +1,85 @@
-// Configuración
-const API_BASE_URL = window.location.origin;
+// Esperar a que el DOM esté completamente cargado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado, inicializando aplicación...');
+    
+    // Configuración
+    const API_BASE_URL = window.location.origin;
 
-// Elementos del DOM
-const navBtns = document.querySelectorAll('.nav-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-const crearForm = document.getElementById('crearForm');
-const agregarAtributoBtn = document.getElementById('agregarAtributo');
-const atributosContainer = document.getElementById('atributosContainer');
-const recargarProductosBtn = document.getElementById('recargarProductos');
-const buscarBtn = document.getElementById('buscarBtn');
-const modal = document.getElementById('modalProducto');
-const closeModal = document.querySelector('.close');
+    // Elementos del DOM
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const crearForm = document.getElementById('crearForm');
+    const agregarAtributoBtn = document.getElementById('agregarAtributo');
+    const atributosContainer = document.getElementById('atributosContainer');
+    const recargarProductosBtn = document.getElementById('recargarProductos');
+    const buscarBtn = document.getElementById('buscarBtn');
+    const modal = document.getElementById('modalProducto');
+    const closeModal = document.querySelector('.close');
 
-// Event Listeners - Navegación
-navBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        
-        // Remover active de todos
-        navBtns.forEach(b => b.classList.remove('active'));
-        tabContents.forEach(tc => tc.classList.remove('active'));
-        
-        // Agregar active al seleccionado
-        btn.classList.add('active');
-        document.getElementById(tab).classList.add('active');
+    // Validación
+    if (!crearForm) {
+        console.error('❌ No se encontró el elemento crearForm');
+    } else {
+        console.log('✅ crearForm encontrado, agregando listener...');
+        crearForm.addEventListener('submit', crearProducto);
+    }
 
-        // Si es listar, cargar productos
-        if (tab === 'listar') {
-            cargarProductos();
+    // Event Listeners - Navegación
+    navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            
+            // Remover active de todos
+            navBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(tc => tc.classList.remove('active'));
+            
+            // Agregar active al seleccionado
+            btn.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+
+            // Si es listar, cargar productos
+            if (tab === 'listar') {
+                cargarProductos();
+            }
+        });
+    });
+
+    // Event Listeners - Formulario
+    if (agregarAtributoBtn) {
+        agregarAtributoBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            agregarAtributo();
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-eliminar-atributo')) {
+            e.target.parentElement.remove();
+        }
+    });
+
+    // Event Listeners - Otros
+    if (recargarProductosBtn) {
+        recargarProductosBtn.addEventListener('click', cargarProductos);
+    }
+
+    if (buscarBtn) {
+        buscarBtn.addEventListener('click', buscarPorAtributo);
+    }
+
+    if (closeModal) {
+        closeModal.addEventListener('click', cerrarModal);
+    }
+
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            cerrarModal();
         }
     });
 });
 
-// Event Listeners - Formulario
-crearForm.addEventListener('submit', crearProducto);
-
-agregarAtributoBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    agregarAtributo();
-});
-
-document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-eliminar-atributo')) {
-        e.target.parentElement.remove();
-    }
-});
-
-// Event Listeners - Otros
-recargarProductosBtn.addEventListener('click', cargarProductos);
-buscarBtn.addEventListener('click', buscarPorAtributo);
-closeModal.addEventListener('click', cerrarModal);
-window.addEventListener('click', (e) => {
-    if (e.target === modal) cerrarModal();
-});
+// Configuración global
+const API_BASE_URL = window.location.origin;
 
 // ==================== FUNCIONES ====================
 
