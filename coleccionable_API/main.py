@@ -34,8 +34,9 @@ DB_NAME = os.getenv("MONGODB_DB_NAME", "tienda_coleccionables")
 client: Optional[AsyncIOMotorClient] = None
 db: Optional[AsyncIOMotorDatabase] = None
 
-# Debug: mostrar si se cargó la variable
-print(f"📍 MONGODB_URI configurada: {'✅ SÍ' if os.getenv('MONGODB_URI') else '❌ NO (usando default)'}")
+# Debug: mostrar qué configuración se está usando
+print(f"📍 MONGODB_URI variable existe: {'✅ SÍ' if os.getenv('MONGODB_URI') else '❌ NO'}")
+print(f"📍 Usando URL: {MONGO_URL[:50]}..." if len(MONGO_URL) > 50 else f"📍 Usando URL: {MONGO_URL}")
 print(f"📍 DB_NAME: {DB_NAME}")
 
 @app.on_event("startup")
