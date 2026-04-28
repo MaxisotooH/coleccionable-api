@@ -28,7 +28,7 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 # Configuración de MongoDB desde variables de entorno
 MONGO_URL = os.getenv(
     "MONGODB_URI",
-    "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true"
+    "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0&tls=true&authSource=admin"
 )
 DB_NAME = os.getenv("MONGODB_DB_NAME", "tienda_coleccionables")
 client: Optional[AsyncIOMotorClient] = None
@@ -39,14 +39,15 @@ async def startup_db_client():
     """Conectar a MongoDB al iniciar"""
     global client, db
     try:
-        client = AsyncIOMotorClient(MONGO_URL)
+        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000)
         # Verificar conexión
         await client.admin.command('ismaster')
         db = client[DB_NAME]
         print("✅ Conectado a MongoDB Atlas exitosamente")
     except Exception as e:
-        print(f"❌ Error conectando a MongoDB: {e}")
-        raise
+        print(f"⚠️ Advertencia: No se pudo conectar a MongoDB: {e}")
+        print("⚠️ La aplicación se iniciará sin base de datos. Los endpoints retornarán errores.")
+        # NO hacer raise - permitir que la app se inicie aunque MongoDB falle
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
