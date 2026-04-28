@@ -6,6 +6,17 @@ from datetime import datetime
 
 app = FastAPI(title="Sistema de Gestión de Inventario - Coleccionables")
 
+# Endpoint raíz (health check)
+@app.get("/")
+async def root():
+    """Endpoint raíz para verificar que la API está funcionando"""
+    return {
+        "status": "online",
+        "api": "Sistema de Gestión de Inventario - Coleccionables",
+        "docs": "/docs",
+        "version": "1.0.0"
+    }
+
 # Configuración de MongoDB (Usaremos una variable para la URI más adelante)
 MONGO_URL = "mongodb+srv://Maxisotooh:Facundo.2017@cluster0.bnt1q8w.mongodb.net/?appName=Cluster0" # Por ahora local, luego será Atlas
 client = AsyncIOMotorClient(MONGO_URL)
