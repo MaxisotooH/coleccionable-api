@@ -34,6 +34,10 @@ DB_NAME = os.getenv("MONGODB_DB_NAME", "tienda_coleccionables")
 client: Optional[AsyncIOMotorClient] = None
 db: Optional[AsyncIOMotorDatabase] = None
 
+# Debug: mostrar si se cargó la variable
+print(f"📍 MONGODB_URI configurada: {'✅ SÍ' if os.getenv('MONGODB_URI') else '❌ NO (usando default)'}")
+print(f"📍 DB_NAME: {DB_NAME}")
+
 @app.on_event("startup")
 async def startup_db_client():
     """Conectar a MongoDB al iniciar con reintentos"""
@@ -94,6 +98,33 @@ async def root():
         "docs": "/docs",
         "version": "1.0.0"
     }
+
+@app.get("/diagnostico")
+async def diagnostico():
+    """Endpoint de diagnostico para verificar conexión a MongoDB"""
+    global db
+    try:
+        if db is None:
+            return {"status": "❌ DB NO CONECTADA", "db_object": "None"}
+        
+        # Intentar hacer una consulta simple
+        await db.admin.command('ping')
+        
+        # Contar productos en BD
+        count = await db.productos.count_documents({})
+        
+        return {
+            "status": "✅ MongoDB conectada",
+            "database": DB_NAME,
+            "productos_en_bd": count,
+            "connection": "✅ ACTIVA"
+        }
+    except Exception as e:
+        return {
+            "status": "❌ Error",
+            "error": str(e),
+            "db_object": "Existe pero no disponible" if db else "None"
+        }
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def get_dashboard():
